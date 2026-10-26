@@ -1,0 +1,9 @@
+.playwright-mcp/
+.claude/
+.remember/
+.agentsh/
+__pycache__/
+.DS_Store
+
+# Claude Code ctags index
+.claude/tags
