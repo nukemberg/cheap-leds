@@ -24,5 +24,9 @@ gatt:
 probe:
     uv run probe.py
 
+# Send the timer query with FFF4 notifications enabled
+query:
+    uv run query.py
+
 icons:
     uv run make_icons.py

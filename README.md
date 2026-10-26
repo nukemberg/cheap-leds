@@ -25,6 +25,7 @@ Frame: `BC <op> <len> <args…> 55`, big-endian u16s.
 
 Examples: off `bc01010055`, red `bc0406000003e8000055`, 25% `bc050601000000000055`.
 Command map from [mishamyrt/mr-star-ble](https://github.com/mishamyrt/mr-star-ble), verified on hardware with `probe.py`.
+Full decoded protocol (extra opcodes, timers, mic mode, hidden effects, no state readback): [PROTOCOL.md](PROTOCOL.md).
 
 ## Run
 
