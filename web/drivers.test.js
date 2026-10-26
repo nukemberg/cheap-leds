@@ -34,7 +34,26 @@ test("mrstar effect / speed / reverse / length", () => {
   assert.equal(hex(mrstar.length(1)), "bc0302000855"); // clamped to 8
 });
 
+// From the MR Star app's TimerUtils.sendPhoneTime / TimerFragment.
+test("mrstar clock sync puts weekday after the end byte", () => {
+  const d = new Date(2026, 9, 24, 11, 49, 54); // Saturday
+  assert.equal(hex(mrstar.clock(d)), "bc0b0707ea0a180b31365506");
+  assert.equal(hex(mrstar.clock(new Date(2026, 9, 25))).slice(-2), "07"); // Sunday = 7
+  assert.deepEqual(mrstar.init().map(([cmd]) => cmd), ["clock"]);
+});
+
+test("mrstar timers", () => {
+  const weekdays = 0b0011111;
+  assert.equal(hex(mrstar.timer("on", { enabled: true, hour: 7, minute: 30, days: weekdays })), "bc0d060101011f071e55");
+  assert.equal(hex(mrstar.timer("off", { enabled: false, hour: 23, minute: 0, days: 0x7f })), "bc0d06010000ff170055");
+});
+
 // Frames as built by the Lotus Lamp X app (BlePackagingDevice / E1Achieve).
+test("melk timers", () => {
+  assert.equal(hex(melk.timer("on", { enabled: true, hour: 7, minute: 30, days: 0b0011111 })), "7e0782071e00009fef");
+  assert.equal(hex(melk.timer("off", { enabled: false, hour: 23, minute: 0, days: 0x7f })), "7e0782170000017fef");
+});
+
 test("melk power", () => {
   assert.equal(hex(melk.power(true)), "7e0704ff00010201ef");
   assert.equal(hex(melk.power(false)), "7e07040000000201ef");

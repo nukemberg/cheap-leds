@@ -45,6 +45,20 @@ export const reverse = (on) => frame(0x07, [on ? 1 : 0]);
 
 export const length = (count) => frame(0x03, u16(clamp(Math.round(count), ...lengthRange)));
 
+// Clock sync as the app sends it: len 7, then the weekday (1 = Mon … 7 = Sun) after the 55.
+export const clock = (d = new Date()) =>
+  new Uint8Array([
+    0xbc, 0x0b, 0x07, ...u16(d.getFullYear()), d.getMonth() + 1, d.getDate(),
+    d.getHours(), d.getMinutes(), d.getSeconds(), 0x55, ((d.getDay() + 6) % 7) + 1,
+  ]);
+
+export const init = () => [["clock", clock()]];
+
+// Daily on/off timer. days: bit 0 = Mon … bit 6 = Sun. The app sets bit 7 to the
+// inverse of `enabled`; copied as-is.
+export const timer = (kind, { enabled, hour, minute, days }) =>
+  frame(0x0d, [0x01, kind === "on" ? 1 : 0, enabled ? 1 : 0, (days & 0x7f) | (enabled ? 0 : 0x80), hour, minute]);
+
 // [group, [[id, name], ...]]
 export const effects = [
   ["Basic", [

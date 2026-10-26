@@ -3,7 +3,16 @@ import { Light } from "./device.js";
 
 const $ = (id) => document.getElementById(id);
 
-const DEFAULTS = { on: true, mode: "color", hue: 30, sat: 80, bri: 80, effects: {}, spd: 50, rev: false, len: 100 };
+const DEFAULTS = {
+  on: true, mode: "color", hue: 30, sat: 80, bri: 80, effects: {}, spd: 50, rev: false, len: 100,
+  // days: bit 0 = Mon … bit 6 = Sun
+  timers: {
+    on: { enabled: false, time: "07:00", days: 0x7f },
+    off: { enabled: false, time: "23:00", days: 0x7f },
+  },
+};
+const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const PRESETS = [[0, 100], [30, 100], [55, 100], [120, 100], [180, 100], [220, 100], [275, 100], [320, 90], [35, 45], [0, 0]];
 
 const store = {
@@ -21,7 +30,8 @@ const store = {
   },
 };
 
-const state = { ...DEFAULTS, ...store.get("state", {}) };
+const saved = store.get("state", {});
+const state = { ...DEFAULTS, ...saved, timers: { ...DEFAULTS.timers, ...saved.timers } };
 // v1 kept a single MR Star effect id.
 if (typeof state.effect === "number") {
   state.effects = { mrstar: state.effect, ...state.effects };
@@ -210,9 +220,60 @@ function renderEffects() {
   paint();
 }
 
+function buildTimers() {
+  for (const el of document.querySelectorAll(".timer")) {
+    const t = state.timers[el.dataset.kind];
+    const enabled = el.querySelector(".enabled");
+    const time = el.querySelector(".time");
+    enabled.checked = t.enabled;
+    time.value = t.time;
+    enabled.onchange = () => {
+      t.enabled = enabled.checked;
+      save();
+    };
+    time.onchange = () => {
+      if (time.value) t.time = time.value;
+      save();
+    };
+    const days = el.querySelector(".days");
+    DAY_LABELS.forEach((label, bit) => {
+      const b = Object.assign(document.createElement("button"), { textContent: label, title: DAY_NAMES[bit] });
+      const sync = () => b.setAttribute("aria-pressed", !!(t.days & (1 << bit)));
+      b.onclick = () => {
+        t.days ^= 1 << bit;
+        sync();
+        save();
+      };
+      sync();
+      days.append(b);
+    });
+  }
+}
+
+// Timers live on the controllers, so they're written only on Apply, after a clock sync.
+function applyTimers() {
+  const lightsWithTimers = targets().filter((l) => l.driver.timer);
+  for (const light of lightsWithTimers) {
+    light.send("clock", light.driver.clock());
+    for (const kind of ["on", "off"]) {
+      const { enabled, time, days } = state.timers[kind];
+      const [hour, minute] = time.split(":").map(Number);
+      light.send(`timer-${kind}`, light.driver.timer(kind, { enabled, hour, minute, days }));
+    }
+  }
+  const connected = lightsWithTimers.filter((l) => l.connected).length;
+  $("timers-status").textContent = connected
+    ? `Sent to ${connected} controller${connected > 1 ? "s" : ""}${connected < lightsWithTimers.length ? `; ${lightsWithTimers.length - connected} offline will get it on reconnect` : ""}.`
+    : lightsWithTimers.length
+      ? "No controller connected right now; timers will be sent when they reconnect."
+      : "Add and tick a controller first.";
+}
+
 function init() {
   buildPresets();
   renderEffects();
+  buildTimers();
+  $("apply-timers").onclick = applyTimers;
 
   const sendColor = () => {
     state.mode = "color";

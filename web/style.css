@@ -195,4 +195,28 @@ main > details[open] summary { margin-bottom: 8px; }
 .toggle { display: flex; align-items: center; gap: 10px; margin-top: 6px; color: var(--muted); }
 .toggle input { width: 20px; height: 20px; accent-color: var(--light); }
 
+.timer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+.timer .toggle { margin: 0; color: var(--text); }
+.timer .time {
+  font: inherit;
+  color: var(--text);
+  background: #22222c;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+.timer:has(.enabled:not(:checked)) .time,
+.timer:has(.enabled:not(:checked)) .days { opacity: .45; }
+.days { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.days button { padding: 8px 0; border-radius: 999px; font-size: .85rem; }
+.days button[aria-pressed="true"] { background: var(--light); color: var(--bg); border-color: var(--light); }
+
 code { color: var(--text); }

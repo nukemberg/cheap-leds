@@ -66,6 +66,22 @@
       <label class="toggle"><input id="rev" type="checkbox"> Reverse direction</label>
     </section>
 
+    <section>
+      <h2>Timers</h2>
+      <div class="timer" data-kind="on">
+        <label class="toggle"><input type="checkbox" class="enabled"> Turn on at</label>
+        <input type="time" class="time">
+        <div class="days"></div>
+      </div>
+      <div class="timer" data-kind="off">
+        <label class="toggle"><input type="checkbox" class="enabled"> Turn off at</label>
+        <input type="time" class="time">
+        <div class="days"></div>
+      </div>
+      <button id="apply-timers">Apply to controllers</button>
+      <p id="timers-status" class="hint">Timers are stored on the controllers and run with the phone off. Controllers can’t report them back, so this shows what was last sent from this phone.</p>
+    </section>
+
     <details>
       <summary>Setup</summary>
       <label class="slider">

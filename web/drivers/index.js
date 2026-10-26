@@ -1,6 +1,6 @@
 // Driver registry. A driver exports: id, label, filters (Web Bluetooth requestDevice
 // filters), service, writeChar, lengthRange, effects, and frame builders
-// power/color/brightness/speed/effect/length, plus optional reverse and init.
+// power/color/brightness/speed/effect/length/clock/timer, plus optional reverse and init.
 import * as melk from "./melk.js";
 import * as mrstar from "./mrstar.js";
 

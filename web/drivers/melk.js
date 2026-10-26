@@ -57,6 +57,10 @@ export const clock = (d = new Date()) =>
 
 export const init = () => [["clock", clock()]];
 
+// Daily on/off timer. days: bit 0 = Mon … bit 6 = Sun; bit 7 = enabled.
+export const timer = (kind, { enabled, hour, minute, days }) =>
+  frame(0x82, [hour, minute, 0x00, kind === "on" ? 0x00 : 0x01, (days & 0x7f) | (enabled ? 0x80 : 0)]);
+
 const COLORS = ["Red", "Green", "Blue", "Yellow", "Cyan", "Purple", "White"];
 const C = ["Red", "Green", "Blue", "Yellow", "Cyan", "Purple"];
 
