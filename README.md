@@ -1,6 +1,6 @@
-# LED strip control
+# LED Strip Club
 
-Offline PWA that drives cheap BLE LED controllers via Web Bluetooth, one driver per brand (`web/drivers/`):
+Live at https://nukemberg.github.io/cheap-leds/. An offline PWA that drives cheap BLE LED controllers via Web Bluetooth, one driver per brand (`web/drivers/`):
 
 - **MR Star**: advertises as `GATT--DEMO` (`drivers/mrstar.js`)
 - **Lotus Lamp X**: `MELK-O*` Symphony controllers (`drivers/melk.js`). They advertise intermittently, so power-cycle one if it's missing from the picker.

@@ -1,8 +1,8 @@
 {
-  "id": "./?app=mr-star-lights",
-  "name": "MR Star Lights",
-  "short_name": "MR Star",
-  "description": "Offline controller for MR Star Bluetooth LED strips",
+  "id": "./?app=cheap-leds",
+  "name": "LED Strip Club",
+  "short_name": "LED Strip Club",
+  "description": "Offline controller for cheap Bluetooth LED strips (MR Star, Lotus Lamp X)",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

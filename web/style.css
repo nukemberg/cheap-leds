@@ -24,7 +24,8 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: max(20px, env(safe-area-inset-top)) 20px 20px;
+  gap: 10px;
+  padding: max(20px, env(safe-area-inset-top)) 16px 20px;
   overflow: hidden;
 }
 
@@ -38,15 +39,17 @@ header {
   pointer-events: none;
 }
 
-h1 { position: relative; margin: 0; font-size: 1.6rem; letter-spacing: .02em; }
+h1 { position: relative; margin: 0; font-size: clamp(1.15rem, 5.6vw, 1.6rem); letter-spacing: .02em; white-space: nowrap; }
 h2 { margin: 0 0 12px; font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 
 .install {
   position: relative;
   margin-left: auto;
-  margin-right: 14px;
+  padding: 8px 12px;
   background: #0008;
   border-radius: 999px;
+  white-space: nowrap;
+  font-size: .9rem;
 }
 .install[hidden] { display: none; }
 

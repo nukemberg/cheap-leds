@@ -1,7 +1,10 @@
 // Stale-while-revalidate: serve from cache (works offline), refresh cache from the
 // network in the background so the next launch picks up new deploys.
 // Bump VERSION when the asset list changes.
-const VERSION = "mrstar-v3";
+// Caches are shared by every app on the origin (nukemberg.github.io), so only
+// ever delete caches carrying this app's prefix.
+const PREFIX = "cheap-leds-";
+const VERSION = `${PREFIX}v1`;
 const ASSETS = [
   "./",
   "index.html",
@@ -25,7 +28,9 @@ self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k.startsWith(PREFIX) && k !== VERSION).map((k) => caches.delete(k))),
+      )
       .then(() => self.clients.claim()),
   );
 });
