@@ -1,5 +1,5 @@
 {
-  "id": "./",
+  "id": "./?app=mr-star-lights",
   "name": "MR Star Lights",
   "short_name": "MR Star",
   "description": "Offline controller for MR Star Bluetooth LED strips",
