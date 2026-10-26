@@ -41,6 +41,15 @@ header {
 h1 { position: relative; margin: 0; font-size: 1.6rem; letter-spacing: .02em; }
 h2 { margin: 0 0 12px; font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 
+.install {
+  position: relative;
+  margin-left: auto;
+  margin-right: 14px;
+  background: #0008;
+  border-radius: 999px;
+}
+.install[hidden] { display: none; }
+
 .power {
   position: relative;
   width: 60px; height: 60px;

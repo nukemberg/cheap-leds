@@ -1,14 +1,19 @@
 {
+  "id": "./",
   "name": "MR Star Lights",
   "short_name": "MR Star",
+  "description": "Offline controller for MR Star Bluetooth LED strips",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone"],
+  "orientation": "portrait",
   "background_color": "#0d0d12",
   "theme_color": "#0d0d12",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" },
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

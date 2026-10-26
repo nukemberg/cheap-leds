@@ -1,6 +1,7 @@
-// Cache-first service worker: app works fully offline after the first load.
-// Bump VERSION when shipping changes.
-const VERSION = "mrstar-v1";
+// Stale-while-revalidate: serve from cache (works offline), refresh cache from the
+// network in the background so the next launch picks up new deploys.
+// Bump VERSION when the asset list changes.
+const VERSION = "mrstar-v2";
 const ASSETS = [
   "./",
   "index.html",
@@ -30,6 +31,16 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request)),
+    caches.open(VERSION).then(async (cache) => {
+      const hit = await cache.match(e.request, { ignoreSearch: true });
+      const refresh = fetch(e.request)
+        .then((res) => {
+          if (res.ok) cache.put(e.request, res.clone());
+          return res;
+        })
+        .catch(() => hit);
+      if (hit) e.waitUntil(refresh);
+      return hit || refresh;
+    }),
   );
 });

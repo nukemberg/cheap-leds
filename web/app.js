@@ -227,3 +227,22 @@ function init() {
 init();
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+
+// Chrome fires this only when the app is installable and not yet installed.
+let installPrompt = null;
+addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  $("install").hidden = false;
+});
+addEventListener("appinstalled", () => {
+  installPrompt = null;
+  $("install").hidden = true;
+});
+$("install").onclick = async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice;
+  installPrompt = null;
+  $("install").hidden = true;
+};
