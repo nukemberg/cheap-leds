@@ -95,3 +95,80 @@ The webapp currently exposes the shown set plus 9, 28, 94, 95 (from mr-star-ble)
 
 `09` persistence, `13` meaning, `50`, timer day-mask bit 7, timer reply bytes 0/2/3, whether
 `0C` replies once timers exist, which hidden effects the firmware implements.
+
+---
+
+# Lotus Lamp X / MELK protocol
+
+Decoded from the official Android app `com.szelk.ledlamppro` ("LotusLamp X") 5.21.01, cross-checked
+with the [elkbledom](https://github.com/dave-code-ruiz/elkbledom) Home Assistant integration,
+and probed on a `MELK-OA10   45` controller. Driver: `web/drivers/melk.js`.
+
+## Transport
+
+| | |
+|---|---|
+| Advertised name | `MELK-OA10   45` — name only, no service UUIDs; advertises intermittently (power-cycle to make it visible) |
+| GATT service | `0xFFF0` |
+| Write | `0xFFF3` (write, write-without-response, read) |
+| Notify | `0xFFF4` (notify, read) |
+
+The app picks a variant from the name. `MELK-O*` without W/WCT in the name is "Symphony"
+(addressable) using the plain 9-byte E1 frame below. Names starting `ELK-` use an encrypted
+variant (AA…55 frame XORed with a keystream, 21 bytes) — not supported here.
+
+No handshake for MELK-OA10. The app enables notify on FFF4, then sends a clock sync.
+(elkbledom sends `7E 07 83` then `7E 04 04` as a "login"; the device answered `12 13 14` on
+FFF4, after which FFF4 read back ASCII `CSZGP10Y69-BGR04`, likely a chip/firmware tag.)
+
+## Frame (E1)
+
+```
+7E <len> <cmd> p0 p1 p2 p3 p4 EF        defaults: p0–p3 = FF, p4 = 00
+```
+
+`len` is 07 except 04 for brightness and 06 for clock. Firmware appears to ignore it.
+
+| Function | Frame |
+|---|---|
+| Power on / off | `7E 07 04 FF 00 01 02 01 EF` / `7E 07 04 00 00 00 02 01 EF` (p1 = lamp type, 0 = all) |
+| RGB colour | `7E 07 05 03 RR GG BB 10 EF` |
+| Brightness 0–100 | `7E 04 01 BB 01 FF 02 01 EF` |
+| Speed 0–100 | `7E 07 02 SS FF FF FF 00 EF` |
+| Effect | `7E 07 03 MM 06 FF FF 00 EF` |
+| Device-mic mode | `7E 07 03 MM 04 FF FF 00 EF` (80 Energy1, 81 Rhythm1, 82 Spectrum1, 83 Scroll1, 84–87 the "2" set) |
+| Mic sensitivity / on-off | `7E 07 06 SS FF FF FF 00 EF` / `7E 07 07 0X FF FF FF 00 EF` |
+| Phone-music beat | `7E 07 08 VAL IDX FF FF 00 EF`; colour `7E 07 05 03 R G B 20 EF` |
+| RGB channel order | `7E 07 81 a b c FF 00 EF` (1 = R, 2 = G, 3 = B in wire order). **Persistent config** |
+| LED count 10–1000 | `7E 07 21 LO HI 00 FF 00 EF` (little-endian). **Persistent config** |
+| Clock sync | `7E 06 83 hh mm ss wd 00 EF` (wd 0 = Sunday) |
+| Timer set / query | `7E 07 82 hh mm 00 OO MASK EF` (OO 00 on / 01 off; MASK bit0 Mon … bit6 Sun, bit7 enabled) / `7E 07 82 FF FF FF OO 00 EF` |
+| Multi-timer | read `7E 8A 00 00 EF`; write `7E 89 [8-byte records] n 00 EF` |
+
+**Never send:** factory reset `7E 07 87 …`; protect code / password `8E 07 24 …`; pairing/lock
+`8F`/`8C`; BLE settings `D7`, sync code `72`, OTA `43`, app type `EA`, mesh `C1`–`C5`/`E1`.
+
+## State readback
+
+None. The app parses only timer (`82`), multi-timer (`8A`), protect-code (`24`) and TV (`66`)
+replies. FFF3/FFF4 reads echo the last frame written (an observed `7E 06 83 0B 31 36 06 00 EF`
+is a clock sync for 11:49:54 Saturday). The elkbledom query `7E 00 01 FA …` got no reply.
+
+## Effects (decimal ids)
+
+Most come in forward/back pairs `id`, `id + 1`; the webapp lists the forward id and the
+Reverse toggle selects `id + 1`.
+
+| Group | Ids |
+|---|---|
+| Basic | 0 Auto play, 1/2 Magic, 212 7-colour energy, 193–195 jump (7C, RGB, YCP), 196–198 strobe, 199 7C gradual, 200 R-Y, 201 R-P, 202 G-C, 203 G-Y, 204 B-P gradual |
+| Marquee | 205–211 Red, Green, Blue, Yellow, Cyan, Purple, White |
+| Transition (pairs) | 3 7C, 5 RGB, 7 YCP, 9–21 "6 colours → X" for Red, Green, Blue, Cyan, Yellow, Purple, White |
+| Tail (pairs) | 23 7C, then Red … White |
+| Water (pairs) | 39 7C, RGB, YCP, R-G, G-B, Y-B, Y-C, C-P, White |
+| Close / open (pairs) | 57 7C, RGB, YCP, Red … White |
+| Race / Wave (pairs) | 77 / 83: 7C, RGB, YCP |
+| Running (pairs) | 89 Red … White, 7C, RGB, YCP, B-P-C-Y, B-G-C-Y; 113–141 and 167–180 dot / 7C-in-colour (not in UI, names unknown) |
+| Flow (pairs) | 143 W-x-W, 155 x-W-x for R, G, B, Y, C, P |
+| Flush (pairs) | 181 7C, RGB, YCP; 187 same, close/open |
+| Other | 213–233, only for model numbers ≥ 21 (not OA10) |

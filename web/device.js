@@ -1,15 +1,16 @@
-// Web Bluetooth connection to one MR Star controller.
-// Writes are serialized (GATT allows one op at a time) and coalesced per opcode,
+// Web Bluetooth connection to one LED controller.
+// Writes are serialized (GATT allows one op at a time) and coalesced per command,
 // so dragging a slider sends only the latest value instead of flooding the link.
 
-import { ADV_SERVICE, GATT_SERVICE, WRITE_CHAR } from "./protocol.js";
+import { driverFor, requestOptions } from "./drivers/index.js";
 
 export class Light extends EventTarget {
   constructor(device) {
     super();
     this.device = device;
+    this.driver = driverFor(device.name);
     this.char = null;
-    this.pending = new Map(); // opcode -> latest frame
+    this.pending = new Map(); // command name -> latest frame
     this.busy = false;
     this.wantConnected = true;
     this.retry = 0;
@@ -25,11 +26,7 @@ export class Light extends EventTarget {
   }
 
   static async pick() {
-    const device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [ADV_SERVICE] }],
-      optionalServices: [GATT_SERVICE],
-    });
-    return new Light(device);
+    return new Light(await navigator.bluetooth.requestDevice(requestOptions()));
   }
 
   // Devices granted earlier (needs Chrome's persistent Web Bluetooth permissions).
@@ -43,9 +40,10 @@ export class Light extends EventTarget {
     this.#emit("connecting");
     try {
       const server = await this.device.gatt.connect();
-      const svc = await server.getPrimaryService(GATT_SERVICE);
-      this.char = await svc.getCharacteristic(WRITE_CHAR);
+      const svc = await server.getPrimaryService(this.driver.service);
+      this.char = await svc.getCharacteristic(this.driver.writeChar);
       this.retry = 0;
+      for (const [cmd, bytes] of this.driver.init?.() ?? []) this.send(cmd, bytes);
       this.#emit("connected");
       this.#pump();
     } catch (err) {
@@ -62,8 +60,14 @@ export class Light extends EventTarget {
     if (this.device.gatt.connected) this.device.gatt.disconnect();
   }
 
-  send(bytes) {
-    this.pending.set(bytes[1], bytes);
+  // Build a frame with the driver and queue it; unsupported commands are skipped.
+  command(cmd, ...args) {
+    const build = this.driver[cmd];
+    if (typeof build === "function") this.send(cmd, build(...args));
+  }
+
+  send(cmd, bytes) {
+    this.pending.set(cmd, bytes);
     this.#pump();
   }
 
@@ -72,8 +76,8 @@ export class Light extends EventTarget {
     this.busy = true;
     try {
       while (this.pending.size && this.connected) {
-        const [op, bytes] = this.pending.entries().next().value;
-        this.pending.delete(op);
+        const [cmd, bytes] = this.pending.entries().next().value;
+        this.pending.delete(cmd);
         await this.char.writeValueWithoutResponse(bytes);
       }
     } catch (err) {

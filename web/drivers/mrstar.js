@@ -1,23 +1,9 @@
-// MR Star BLE LED controller protocol.
+// MR Star BLE LED controller (advertises as GATT--DEMO). See PROTOCOL.md.
 //
 // Advertised service 0x2022 (used for discovery only); GATT service 0xFFF0,
 // commands written (without response) to characteristic 0xFFF3.
 // Frame: BC <op> <len> <args...> 55. Multi-byte values are big-endian.
-// The device sends no state back (0xFFF4 notify stays silent).
-
-export const ADV_SERVICE = 0x2022;
-export const GATT_SERVICE = 0xfff0;
-export const WRITE_CHAR = 0xfff3;
-
-export const Op = {
-  POWER: 0x01,
-  LENGTH: 0x03,
-  COLOR: 0x04,
-  BRIGHTNESS: 0x05,
-  EFFECT: 0x06,
-  REVERSE: 0x07,
-  SPEED: 0x08,
-};
+// The device sends no state back.
 
 const u16 = (v) => [(v >> 8) & 0xff, v & 0xff];
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -27,11 +13,18 @@ export function frame(op, args) {
   return new Uint8Array([0xbc, op, args.length, ...args, 0x55]);
 }
 
-export const power = (on) => frame(Op.POWER, [on ? 1 : 0]);
+export const id = "mrstar";
+export const label = "MR Star";
+export const filters = [{ services: [0x2022] }];
+export const service = 0xfff0;
+export const writeChar = 0xfff3;
+export const lengthRange = [8, 300];
+
+export const power = (on) => frame(0x01, [on ? 1 : 0]);
 
 // hue 0-360, saturation 0-100 (device takes saturation * 10)
 export const color = (hue, sat) =>
-  frame(Op.COLOR, [
+  frame(0x04, [
     ...u16(Math.round(clamp(hue, 0, 360))),
     ...u16(Math.round(clamp(sat, 0, 100) * 10)),
     0,
@@ -40,18 +33,20 @@ export const color = (hue, sat) =>
 
 // 0-1 mapped onto 0-1024
 export const brightness = (level) =>
-  frame(Op.BRIGHTNESS, [...u16(Math.round(clamp(level, 0, 1) * 1024)), 0, 0, 0, 0]);
+  frame(0x05, [...u16(Math.round(clamp(level, 0, 1) * 1024)), 0, 0, 0, 0]);
 
-export const effect = (id) => frame(Op.EFFECT, u16(id));
+// MR Star has a separate direction command, so effects ignore `rev`.
+export const effect = (effectId) => frame(0x06, u16(effectId));
 
 // 0-1 mapped onto 0-100
-export const speed = (level) => frame(Op.SPEED, [Math.round(clamp(level, 0, 1) * 100)]);
+export const speed = (level) => frame(0x08, [Math.round(clamp(level, 0, 1) * 100)]);
 
-export const reverse = (on) => frame(Op.REVERSE, [on ? 1 : 0]);
+export const reverse = (on) => frame(0x07, [on ? 1 : 0]);
 
-export const length = (count) => frame(Op.LENGTH, u16(clamp(Math.round(count), 8, 300)));
+export const length = (count) => frame(0x03, u16(clamp(Math.round(count), ...lengthRange)));
 
-export const EFFECTS = [
+// [group, [[id, name], ...]]
+export const effects = [
   ["Basic", [
     [1, "Automatic loop"], [2, "Symphony"], [3, "Colorful energy"], [4, "Colorful jumps"],
     [7, "Rainbow strobe"], [9, "YPB strobe"], [10, "Rainbow gradient"],

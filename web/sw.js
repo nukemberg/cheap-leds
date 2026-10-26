@@ -1,13 +1,15 @@
 // Stale-while-revalidate: serve from cache (works offline), refresh cache from the
 // network in the background so the next launch picks up new deploys.
 // Bump VERSION when the asset list changes.
-const VERSION = "mrstar-v2";
+const VERSION = "mrstar-v3";
 const ASSETS = [
   "./",
   "index.html",
   "app.js",
   "device.js",
-  "protocol.js",
+  "drivers/index.js",
+  "drivers/mrstar.js",
+  "drivers/melk.js",
   "style.css",
   "manifest.webmanifest",
   "icon.svg",

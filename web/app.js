@@ -1,9 +1,9 @@
-import * as P from "./protocol.js";
+import { drivers } from "./drivers/index.js";
 import { Light } from "./device.js";
 
 const $ = (id) => document.getElementById(id);
 
-const DEFAULTS = { on: true, mode: "color", hue: 30, sat: 80, bri: 80, effect: 1, spd: 50, rev: false, len: 100 };
+const DEFAULTS = { on: true, mode: "color", hue: 30, sat: 80, bri: 80, effects: {}, spd: 50, rev: false, len: 100 };
 const PRESETS = [[0, 100], [30, 100], [55, 100], [120, 100], [180, 100], [220, 100], [275, 100], [320, 90], [35, 45], [0, 0]];
 
 const store = {
@@ -22,25 +22,36 @@ const store = {
 };
 
 const state = { ...DEFAULTS, ...store.get("state", {}) };
+// v1 kept a single MR Star effect id.
+if (typeof state.effect === "number") {
+  state.effects = { mrstar: state.effect, ...state.effects };
+  delete state.effect;
+}
 const meta = store.get("devices", {}); // id -> { name, enabled }
 const lights = new Map(); // id -> Light
 
 const save = () => store.set("state", state);
 const saveMeta = () => store.set("devices", meta);
 
-function broadcast(bytes) {
-  for (const light of lights.values()) {
-    if (meta[light.id]?.enabled !== false) light.send(bytes);
-  }
+const targets = () => [...lights.values()].filter((l) => meta[l.id]?.enabled !== false);
+
+function broadcast(cmd, ...args) {
+  for (const light of targets()) light.command(cmd, ...args);
+}
+
+function sendEffect(light) {
+  const effectId = state.effects[light.driver.id];
+  if (effectId !== undefined) light.command("effect", effectId, state.rev);
 }
 
 // Full state sync, used when a controller (re)connects since it can't report its own state.
 function syncTo(light) {
-  light.send(P.power(state.on));
-  light.send(P.brightness(state.bri / 100));
-  light.send(P.speed(state.spd / 100));
-  light.send(P.reverse(state.rev));
-  light.send(state.mode === "effect" ? P.effect(state.effect) : P.color(state.hue, state.sat));
+  light.command("power", state.on);
+  light.command("brightness", state.bri / 100);
+  light.command("speed", state.spd / 100);
+  light.command("reverse", state.rev);
+  if (state.mode === "effect" && state.effects[light.driver.id] !== undefined) sendEffect(light);
+  else light.command("color", state.hue, state.sat);
 }
 
 // ---- devices ----
@@ -55,6 +66,7 @@ function addLight(light) {
     renderDevices();
   });
   renderDevices();
+  renderEffects();
   return light;
 }
 
@@ -62,9 +74,10 @@ function renderDevices() {
   const ul = $("devices");
   ul.replaceChildren();
   $("empty").hidden = lights.size > 0;
-  let i = 0;
+  const counts = {};
   for (const light of lights.values()) {
-    i++;
+    const { driver } = light;
+    counts[driver.id] = (counts[driver.id] ?? 0) + 1;
     const m = meta[light.id];
     const li = document.createElement("li");
     li.className = light.connected ? "on" : "off";
@@ -76,7 +89,9 @@ function renderDevices() {
       if (check.checked) syncTo(light);
     };
 
-    const name = Object.assign(document.createElement("input"), { className: "name", value: m.name === "GATT--DEMO" ? `Strip ${i}` : m.name });
+    // Raw advertised names (GATT--DEMO, MELK-OA10 …) get a friendlier default.
+    const isRaw = m.name === light.device.name || m.name === "GATT--DEMO";
+    const name = Object.assign(document.createElement("input"), { className: "name", value: isRaw ? `${driver.label} ${counts[driver.id]}` : m.name });
     name.onchange = () => {
       m.name = name.value;
       saveMeta();
@@ -94,6 +109,7 @@ function renderDevices() {
       saveMeta();
       await light.device.forget?.().catch(() => {});
       renderDevices();
+      renderEffects();
     };
 
     li.append(check, name, status, remove);
@@ -122,7 +138,7 @@ function paint() {
   $("spd-out").textContent = `${state.spd}%`;
   $("len-out").textContent = state.len;
   for (const b of document.querySelectorAll("#effects button")) {
-    b.classList.toggle("active", state.mode === "effect" && +b.dataset.id === state.effect);
+    b.classList.toggle("active", state.mode === "effect" && state.effects[b.dataset.driver] === +b.dataset.id);
   }
   $("swatch").classList.toggle("active", state.mode === "color");
 }
@@ -142,7 +158,7 @@ function setColor(hue, sat) {
   Object.assign(state, { hue, sat, mode: "color" });
   $("hue").value = hue;
   $("sat").value = sat;
-  broadcast(P.color(hue, sat));
+  broadcast("color", hue, sat);
   paint();
   save();
 }
@@ -157,55 +173,72 @@ function buildPresets() {
   }
 }
 
-function buildEffects() {
-  for (const [group, items] of P.EFFECTS) {
-    const details = document.createElement("details");
-    details.append(Object.assign(document.createElement("summary"), { textContent: group }));
-    const grid = document.createElement("div");
-    grid.className = "chips";
-    for (const [id, label] of items) {
-      const b = Object.assign(document.createElement("button"), { textContent: label });
-      b.dataset.id = id;
-      b.onclick = () => {
-        Object.assign(state, { effect: id, mode: "effect" });
-        broadcast(P.effect(id));
-        paint();
-        save();
-      };
-      grid.append(b);
+function pickEffect(driver, effectId) {
+  state.effects[driver.id] = effectId;
+  state.mode = "effect";
+  for (const light of targets()) if (light.driver === driver) sendEffect(light);
+  paint();
+  save();
+}
+
+// Effect lists differ per brand: show one block per brand in use (all brands when none added).
+function renderEffects() {
+  const present = new Set([...lights.values()].map((l) => l.driver));
+  const shown = drivers.filter((d) => !present.size || present.has(d));
+  const root = $("effects");
+  root.replaceChildren();
+  for (const driver of shown) {
+    if (shown.length > 1) {
+      root.append(Object.assign(document.createElement("h3"), { textContent: driver.label }));
     }
-    details.append(grid);
-    $("effects").append(details);
+    for (const [group, items] of driver.effects) {
+      const details = document.createElement("details");
+      details.append(Object.assign(document.createElement("summary"), { textContent: group }));
+      const grid = document.createElement("div");
+      grid.className = "chips";
+      for (const [effectId, label] of items) {
+        const b = Object.assign(document.createElement("button"), { textContent: label });
+        b.dataset.id = effectId;
+        b.dataset.driver = driver.id;
+        b.onclick = () => pickEffect(driver, effectId);
+        grid.append(b);
+      }
+      details.append(grid);
+      root.append(details);
+    }
   }
+  paint();
 }
 
 function init() {
   buildPresets();
-  buildEffects();
+  renderEffects();
 
-  bindRange("hue", "hue", () => {
+  const sendColor = () => {
     state.mode = "color";
-    broadcast(P.color(state.hue, state.sat));
-  });
-  bindRange("sat", "sat", () => {
-    state.mode = "color";
-    broadcast(P.color(state.hue, state.sat));
-  });
-  bindRange("bri", "bri", () => broadcast(P.brightness(state.bri / 100)));
-  bindRange("spd", "spd", () => broadcast(P.speed(state.spd / 100)));
+    broadcast("color", state.hue, state.sat);
+  };
+  bindRange("hue", "hue", sendColor);
+  bindRange("sat", "sat", sendColor);
+  bindRange("bri", "bri", () => broadcast("brightness", state.bri / 100));
+  bindRange("spd", "spd", () => broadcast("speed", state.spd / 100));
   bindRange("len", "len", () => {});
 
   $("swatch").onclick = () => setColor(state.hue, state.sat);
   $("rev").checked = state.rev;
   $("rev").onchange = () => {
     state.rev = $("rev").checked;
-    broadcast(P.reverse(state.rev));
+    broadcast("reverse", state.rev);
+    // Drivers without a direction command encode it in the effect id.
+    if (state.mode === "effect") {
+      for (const light of targets()) if (!light.driver.reverse) sendEffect(light);
+    }
     save();
   };
-  $("send-len").onclick = () => broadcast(P.length(state.len));
+  $("send-len").onclick = () => broadcast("length", state.len);
   $("power").onclick = () => {
     state.on = !state.on;
-    broadcast(P.power(state.on));
+    broadcast("power", state.on);
     paint();
     save();
   };

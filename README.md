@@ -1,8 +1,13 @@
-# MR Star LED control
+# LED strip control
 
-Offline PWA that drives MR Star BLE LED controllers (advertise as `GATT--DEMO`) via Web Bluetooth.
+Offline PWA that drives cheap BLE LED controllers via Web Bluetooth, one driver per brand (`web/drivers/`):
 
-## Protocol
+- **MR Star**: advertises as `GATT--DEMO` (`drivers/mrstar.js`)
+- **Lotus Lamp X**: `MELK-O*` Symphony controllers (`drivers/melk.js`). They advertise intermittently, so power-cycle one if it's missing from the picker.
+
+Full protocol details for both are in [PROTOCOL.md](PROTOCOL.md). A new brand needs a driver module, plus an entry in `drivers/index.js` and in `web/sw.js`.
+
+## MR Star protocol
 
 | | |
 |---|---|
