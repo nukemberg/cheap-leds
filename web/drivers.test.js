@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as mrstar from "./drivers/mrstar.js";
 import * as melk from "./drivers/melk.js";
+import * as banlanx from "./drivers/banlanx.js";
 import { driverFor, requestOptions } from "./drivers/index.js";
 
 const hex = (b) => Buffer.from(b).toString("hex");
@@ -101,6 +102,30 @@ test("driver selection and request options", () => {
   assert.equal(driverFor("MELK-OA10   45"), melk);
   assert.equal(driverFor(undefined), mrstar);
   const opts = requestOptions();
-  assert.deepEqual(opts.filters, [{ services: [0x2022] }, { namePrefix: "MELK" }]);
-  assert.deepEqual(opts.optionalServices, [0xfff0]);
+  assert.deepEqual(opts.filters.slice(0, 2), [{ services: [0x2022] }, { namePrefix: "MELK" }]);
+  assert.ok(opts.filters.some((f) => f.namePrefix === "SP6"));
+  assert.deepEqual(opts.optionalServices, [0xfff0, 0xffe0]);
+  assert.equal(driverFor("SP621E_1234"), banlanx);
+});
+
+// Frames as built by uniled's banlanx2.py (power/colour/brightness/effects checked on a real SP621E).
+test("banlanx power / brightness / speed / effect", () => {
+  assert.equal(hex(banlanx.power(true)), "a0620101");
+  assert.equal(hex(banlanx.power(false)), "a0620100");
+  assert.equal(hex(banlanx.brightness(1)), "a06601ff");
+  assert.equal(hex(banlanx.brightness(0)), "a0660100");
+  assert.equal(hex(banlanx.speed(0)), "a0670101");
+  assert.equal(hex(banlanx.speed(1)), "a067010a");
+  assert.equal(hex(banlanx.effect(0x2e)), "a063012e");
+});
+
+test("banlanx color switches to solid then sets RGB", () => {
+  const frames = banlanx.color(120, 100);
+  assert.deepEqual(frames.map(hex), ["a06301be", "a06904" + "00ff00ff"]);
+});
+
+test("banlanx effect ids are unique", () => {
+  const ids = banlanx.effects.flatMap(([, items]) => items.map(([i]) => i));
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(ids.length, 0x8e);
 });

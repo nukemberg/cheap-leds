@@ -4,7 +4,7 @@
 // Caches are shared by every app on the origin (nukemberg.github.io), so only
 // ever delete caches carrying this app's prefix.
 const PREFIX = "cheap-leds-";
-const VERSION = `${PREFIX}v1`;
+const VERSION = `${PREFIX}v2`;
 const ASSETS = [
   "./",
   "index.html",
@@ -13,6 +13,7 @@ const ASSETS = [
   "drivers/index.js",
   "drivers/mrstar.js",
   "drivers/melk.js",
+  "drivers/banlanx.js",
   "style.css",
   "manifest.webmanifest",
   "icon.svg",

@@ -172,3 +172,34 @@ Reverse toggle selects `id + 1`.
 | Flow (pairs) | 143 W-x-W, 155 x-W-x for R, G, B, Y, C, P |
 | Flush (pairs) | 181 7C, RGB, YCP; 187 same, close/open |
 | Other | 213–233, only for model numbers ≥ 21 (not OA10) |
+
+---
+
+# BanlanX SP621E
+
+Not decoded by us: taken from [monty68/uniled](https://github.com/monty68/uniled) `banlanx2.py`
+(model id `0x621E`, "Mini SPI RGB Controller"). Checked on a real SP621E (advertised as `SP621E`, company `0x5053`, data `0D 10 …`): power, red/green/blue/orange, brightness, effects and the state query (reply `53 43 …`) work. The controller also exposes a second service `5833FF01-9B8B-5191-6142-22A4536EF123` (write `…FF02`, notify `…FF03`), unused. Driver: `web/drivers/banlanx.js`.
+
+| | |
+|---|---|
+| Discovery | Manufacturer data, company `0x5053` or `0x13BD`, first byte `0x0D` or `0x16`; name assumed `SP6…` |
+| GATT service / write | `0xFFE0` / `0xFFE1` |
+
+Frame `A0 <op> <len> <args…>`, no checksum.
+
+| Op | Args | Meaning |
+|---|---|---|
+| `62` | 1 on, 0 off | Power |
+| `63` | effect id | Effect; `BE` = solid colour, `01`–`8E` animations |
+| `64` | order | Chip colour order (persistent; not exposed) |
+| `66` | 0–255 | Brightness |
+| `67` | 1–10 | Speed |
+| `68` | 1–150 | Effect length (not LED count; not exposed) |
+| `69` | R G B level | Solid colour (send `63 BE` first) |
+| `6A` | 0–2 | Light mode |
+| `70` | – | State query (reply header `53 43`) |
+
+Effect families (7 variants each unless noted; per-variant names unknown): rainbow 01–04, fire 05–0A,
+comet 0B–11, meteor 12–18, gradual snake 19–2D, wave 2E–49, stars 4A–50, background stars 51–5D,
+breath 5E–64, stacking 65–6B, stack 6C–72, snake 73–78, comet spin 79–7F, dot spin 80–86,
+segment spin 87–8D, gradient 8E.

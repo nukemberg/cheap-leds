@@ -78,7 +78,8 @@ export class Light extends EventTarget {
       while (this.pending.size && this.connected) {
         const [cmd, bytes] = this.pending.entries().next().value;
         this.pending.delete(cmd);
-        await this.char.writeValueWithoutResponse(bytes);
+        // A command may be several frames (e.g. mode switch + payload); write them in order.
+        for (const f of Array.isArray(bytes) ? bytes : [bytes]) await this.char.writeValueWithoutResponse(f);
       }
     } catch (err) {
       this.#emit("error", err);

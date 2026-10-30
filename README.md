@@ -3,6 +3,7 @@
 Live at https://nukemberg.github.io/cheap-leds/. An offline PWA that drives cheap BLE LED controllers via Web Bluetooth, one driver per brand (`web/drivers/`):
 
 - **MR Star**: advertises as `GATT--DEMO` (`drivers/mrstar.js`)
+- **BanlanX SP621E**: `SP6*` SPI controllers (`drivers/banlanx.js`). Protocol from [uniled](https://github.com/monty68/uniled); checked on a real SP621E (power, colours, brightness, effects). No timers or LED-count command.
 - **Lotus Lamp X**: `MELK-O*` Symphony controllers (`drivers/melk.js`). They advertise intermittently, so power-cycle one if it's missing from the picker.
 
 Full protocol details for both are in [PROTOCOL.md](PROTOCOL.md). A new brand needs a driver module, plus an entry in `drivers/index.js` and in `web/sw.js`.
