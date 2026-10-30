@@ -193,6 +193,9 @@ function pickEffect(driver, effectId) {
 
 // Effect lists differ per brand: show one block per brand in use (all brands when none added).
 function renderEffects() {
+  // LED count only applies to drivers with a length command (SP621E has none).
+  const all = [...lights.values()];
+  $("setup").hidden = all.length > 0 && !all.some((l) => l.driver.length);
   const present = new Set([...lights.values()].map((l) => l.driver));
   const shown = drivers.filter((d) => !present.size || present.has(d));
   const root = $("effects");

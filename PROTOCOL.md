@@ -194,10 +194,13 @@ Frame `A0 <op> <len> <args…>`, no checksum.
 | `64` | order | Chip colour order (persistent; not exposed) |
 | `66` | 0–255 | Brightness |
 | `67` | 1–10 | Speed |
-| `68` | 1–150 | Effect length (not LED count; not exposed) |
+| `68` | 1–150 | Effect length. Confirmed not LED count: with 10, the whole strip still lights. Not exposed |
 | `69` | R G B level | Solid colour (send `63 BE` first) |
 | `6A` | 0–2 | Light mode |
 | `70` | – | State query (reply header `53 43`) |
+
+The official manual (app: SceneX) confirms 142 effects and up to 600 pixels, with no LED-count setting; the app
+only offers rename, RGB order, timers, effect length and music modes.
 
 Effect families (7 variants each unless noted; per-variant names unknown): rainbow 01–04, fire 05–0A,
 comet 0B–11, meteor 12–18, gradual snake 19–2D, wave 2E–49, stars 4A–50, background stars 51–5D,

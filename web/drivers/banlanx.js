@@ -14,8 +14,8 @@ export const filters = [
 ];
 export const service = 0xffe0;
 export const writeChar = 0xffe1;
-// SP621E has no LED-count command in this protocol (0x68 is effect length, not strip length).
-export const lengthRange = [1, 150];
+// No `length` export: SP621E has no LED-count command (0x68 only sets effect length, tested with
+// the strip lit by 10 -> still all LEDs on), so the Setup section is hidden for it.
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const byte = (level) => Math.round(clamp(level, 0, 1) * 255);
